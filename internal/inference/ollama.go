@@ -75,16 +75,18 @@ type ollamaChatChunk struct {
 // (invalid request, connection error, non-200 status) are returned as errors;
 // anything after that is delivered as a final Chunk with Err set.
 func (o *Ollama) Generate(ctx context.Context, req Request) (<-chan Chunk, error) {
-	if req.Model == "" {
-		return nil, fmt.Errorf("%w: empty model", ErrInvalidRequest)
+	if err := req.Validate(); err != nil {
+		return nil, err
 	}
-	if req.Prompt == "" {
-		return nil, fmt.Errorf("%w: empty prompt", ErrInvalidRequest)
+
+	msgs := make([]ollamaMessage, len(req.Messages))
+	for i, m := range req.Messages {
+		msgs[i] = ollamaMessage{Role: m.Role, Content: m.Content}
 	}
 
 	body, err := json.Marshal(ollamaChatRequest{
 		Model:    req.Model,
-		Messages: []ollamaMessage{{Role: "user", Content: req.Prompt}},
+		Messages: msgs,
 		Stream:   true,
 		Options:  ollamaOptions{NumPredict: req.MaxTokens, Temperature: req.Temperature},
 	})

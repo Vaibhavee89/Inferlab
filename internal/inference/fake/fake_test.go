@@ -9,6 +9,13 @@ import (
 	"github.com/Vaibhavee89/inferlab/internal/inference"
 )
 
+func validReq() inference.Request {
+	return inference.Request{
+		Model:    "m",
+		Messages: []inference.Message{{Role: inference.RoleUser, Content: "hi"}},
+	}
+}
+
 func collect(t *testing.T, ch <-chan inference.Chunk) []inference.Chunk {
 	t.Helper()
 	var got []inference.Chunk
@@ -39,31 +46,40 @@ func TestGenerate(t *testing.T) {
 		{
 			name: "streams tokens then done",
 			p:    &Provider{Tokens: []string{"a", "b", "c"}},
-			req:  inference.Request{Prompt: "hi"},
+			req:  validReq(),
 			want: []inference.Chunk{{Text: "a"}, {Text: "b"}, {Text: "c"}, {Done: true}},
 		},
 		{
 			name: "no tokens still sends done",
 			p:    &Provider{},
-			req:  inference.Request{Prompt: "hi"},
+			req:  validReq(),
 			want: []inference.Chunk{{Done: true}},
 		},
 		{
 			name: "mid-stream error is the last chunk",
 			p:    &Provider{Tokens: []string{"a"}, MidStreamErr: boom},
-			req:  inference.Request{Prompt: "hi"},
+			req:  validReq(),
 			want: []inference.Chunk{{Text: "a"}, {Err: boom}},
 		},
 		{
-			name:    "empty prompt is an invalid request",
+			name:    "empty request is invalid",
 			p:       &Provider{Tokens: []string{"a"}},
 			req:     inference.Request{},
 			wantErr: inference.ErrInvalidRequest,
 		},
 		{
+			name: "invalid role is invalid",
+			p:    &Provider{Tokens: []string{"a"}},
+			req: inference.Request{
+				Model:    "m",
+				Messages: []inference.Message{{Role: "robot", Content: "hi"}},
+			},
+			wantErr: inference.ErrInvalidRequest,
+		},
+		{
 			name:    "start error is returned before streaming",
 			p:       &Provider{StartErr: boom},
-			req:     inference.Request{Prompt: "hi"},
+			req:     validReq(),
 			wantErr: boom,
 		},
 	}
@@ -110,7 +126,7 @@ func TestGenerateCancelStopsStream(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			ch, err := tt.p.Generate(ctx, inference.Request{Prompt: "hi"})
+			ch, err := tt.p.Generate(ctx, validReq())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -140,7 +156,7 @@ func TestGenerateCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	ch, err := (&Provider{Tokens: []string{"a"}}).Generate(ctx, inference.Request{Prompt: "hi"})
+	ch, err := (&Provider{Tokens: []string{"a"}}).Generate(ctx, validReq())
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Generate() error = %v, want context.Canceled", err)
 	}

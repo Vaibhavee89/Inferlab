@@ -4,7 +4,6 @@ package fake
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Vaibhavee89/inferlab/internal/inference"
@@ -33,8 +32,8 @@ func (p *Provider) Generate(ctx context.Context, req inference.Request) (<-chan 
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if req.Prompt == "" {
-		return nil, fmt.Errorf("%w: empty prompt", inference.ErrInvalidRequest)
+	if err := req.Validate(); err != nil {
+		return nil, err
 	}
 	if p.StartErr != nil {
 		return nil, p.StartErr

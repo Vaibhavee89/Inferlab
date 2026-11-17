@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+func userMsgs(content string) []Message {
+	return []Message{{Role: RoleUser, Content: content}}
+}
+
 // tokenLine renders one Ollama NDJSON token line.
 func tokenLine(s string) string {
 	b, _ := json.Marshal(s)
@@ -106,7 +110,7 @@ func TestOllamaGenerateStream(t *testing.T) {
 			srv := ndjsonServer(t, tt.lines...)
 			p := NewOllama(srv.URL, srv.Client())
 
-			ch, err := p.Generate(context.Background(), Request{Model: "m", Prompt: "hi"})
+			ch, err := p.Generate(context.Background(), Request{Model: "m", Messages: userMsgs("hi")})
 			if err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
@@ -147,12 +151,22 @@ func TestOllamaRequestShape(t *testing.T) {
 	}{
 		{
 			name:        "options set",
-			req:         Request{Model: "llama3", Prompt: "hi", MaxTokens: 64, Temperature: 0.7},
+			req:         Request{Model: "llama3", Messages: userMsgs("hi"), MaxTokens: 64, Temperature: 0.7},
 			wantOptions: map[string]any{"num_predict": float64(64), "temperature": 0.7},
 		},
 		{
+			name: "multi-turn history is sent natively, in order",
+			req: Request{Model: "llama3", Messages: []Message{
+				{Role: RoleSystem, Content: "be brief"},
+				{Role: RoleUser, Content: "hi"},
+				{Role: RoleAssistant, Content: "hello"},
+				{Role: RoleUser, Content: "bye"},
+			}},
+			wantOptions: map[string]any{},
+		},
+		{
 			name:        "zero options are omitted",
-			req:         Request{Model: "llama3", Prompt: "hi"},
+			req:         Request{Model: "llama3", Messages: userMsgs("hi")},
 			wantOptions: map[string]any{},
 		},
 	}
@@ -194,12 +208,14 @@ func TestOllamaRequestShape(t *testing.T) {
 				t.Errorf("stream = %v, want true", got.body["stream"])
 			}
 			msgs, _ := got.body["messages"].([]any)
-			if len(msgs) != 1 {
-				t.Fatalf("messages = %v, want one message", got.body["messages"])
+			if len(msgs) != len(tt.req.Messages) {
+				t.Fatalf("messages = %v, want %d messages", got.body["messages"], len(tt.req.Messages))
 			}
-			msg, _ := msgs[0].(map[string]any)
-			if msg["role"] != "user" || msg["content"] != tt.req.Prompt {
-				t.Errorf("message = %v, want user/%q", msg, tt.req.Prompt)
+			for i, want := range tt.req.Messages {
+				msg, _ := msgs[i].(map[string]any)
+				if msg["role"] != want.Role || msg["content"] != want.Content {
+					t.Errorf("messages[%d] = %v, want %s/%q", i, msg, want.Role, want.Content)
+				}
 			}
 			opts, _ := got.body["options"].(map[string]any)
 			if len(opts) != len(tt.wantOptions) {
@@ -234,36 +250,43 @@ func TestOllamaGenerateStartErrors(t *testing.T) {
 		{
 			name:    "model not found",
 			url:     func() string { return status(404, `{"error":"model 'nope' not found"}`).URL },
-			req:     Request{Model: "nope", Prompt: "hi"},
+			req:     Request{Model: "nope", Messages: userMsgs("hi")},
 			wantIs:  ErrModelNotFound,
 			wantMsg: "model 'nope' not found",
 		},
 		{
 			name:    "bad request",
 			url:     func() string { return status(400, `{"error":"invalid options"}`).URL },
-			req:     Request{Model: "m", Prompt: "hi"},
+			req:     Request{Model: "m", Messages: userMsgs("hi")},
 			wantIs:  ErrInvalidRequest,
 			wantMsg: "invalid options",
 		},
 		{
 			name:    "server error with plain body",
 			url:     func() string { return status(500, "kaboom").URL },
-			req:     Request{Model: "m", Prompt: "hi"},
+			req:     Request{Model: "m", Messages: userMsgs("hi")},
 			wantMsg: "status 500: kaboom",
 		},
 		{
 			name:    "empty model never hits the network",
 			url:     func() string { return "http://127.0.0.1:1" },
-			req:     Request{Prompt: "hi"},
+			req:     Request{Messages: userMsgs("hi")},
 			wantIs:  ErrInvalidRequest,
-			wantMsg: "empty model",
+			wantMsg: "model is required",
 		},
 		{
-			name:    "empty prompt never hits the network",
+			name:    "empty messages never hit the network",
 			url:     func() string { return "http://127.0.0.1:1" },
 			req:     Request{Model: "m"},
 			wantIs:  ErrInvalidRequest,
-			wantMsg: "empty prompt",
+			wantMsg: "messages must not be empty",
+		},
+		{
+			name:    "invalid role never hits the network",
+			url:     func() string { return "http://127.0.0.1:1" },
+			req:     Request{Model: "m", Messages: []Message{{Role: "tool", Content: "x"}}},
+			wantIs:  ErrInvalidRequest,
+			wantMsg: `invalid role "tool"`,
 		},
 		{
 			name: "connection refused",
@@ -272,7 +295,7 @@ func TestOllamaGenerateStartErrors(t *testing.T) {
 				srv.Close()
 				return srv.URL
 			},
-			req:     Request{Model: "m", Prompt: "hi"},
+			req:     Request{Model: "m", Messages: userMsgs("hi")},
 			wantMsg: "request failed",
 		},
 	}
@@ -311,7 +334,7 @@ func TestOllamaGenerateCancel(t *testing.T) {
 	defer cancel()
 
 	p := NewOllama(srv.URL, srv.Client())
-	ch, err := p.Generate(ctx, Request{Model: "m", Prompt: "hi"})
+	ch, err := p.Generate(ctx, Request{Model: "m", Messages: userMsgs("hi")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +372,7 @@ func TestOllamaGenerateCancelWithUnreadChunk(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ch, err := NewOllama(srv.URL, srv.Client()).Generate(ctx, Request{Model: "m", Prompt: "hi"})
+	ch, err := NewOllama(srv.URL, srv.Client()).Generate(ctx, Request{Model: "m", Messages: userMsgs("hi")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +386,7 @@ func TestOllamaGenerateAlreadyCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	ch, err := NewOllama(srv.URL, srv.Client()).Generate(ctx, Request{Model: "m", Prompt: "hi"})
+	ch, err := NewOllama(srv.URL, srv.Client()).Generate(ctx, Request{Model: "m", Messages: userMsgs("hi")})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Generate() error = %v, want context.Canceled", err)
 	}
