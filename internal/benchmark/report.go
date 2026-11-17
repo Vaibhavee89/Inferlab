@@ -55,11 +55,13 @@ type jsonSample struct {
 type jsonReport struct {
 	StartedAt time.Time `json:"started_at"`
 	Config    struct {
-		URL         string `json:"url"`
-		Model       string `json:"model"`
-		Concurrency int    `json:"concurrency"`
-		Requests    int    `json:"requests"`
-		Stream      bool   `json:"stream"`
+		URL           string `json:"url"`
+		Model         string `json:"model"`
+		Concurrency   int    `json:"concurrency"`
+		Requests      int    `json:"requests"`
+		Stream        bool   `json:"stream"`
+		MaxTokens     int    `json:"max_tokens,omitempty"`
+		UniquePrompts bool   `json:"unique_prompts,omitempty"`
 	} `json:"config"`
 	Summary struct {
 		Requests     int             `json:"requests"`
@@ -86,6 +88,7 @@ func WriteJSON(dir string, r Result) (string, error) {
 	rep.StartedAt = r.StartedAt
 	rep.Config.URL, rep.Config.Model = r.URL, r.Model
 	rep.Config.Concurrency, rep.Config.Requests, rep.Config.Stream = r.Concurrency, r.Requests, r.Stream
+	rep.Config.MaxTokens, rep.Config.UniquePrompts = r.MaxTokens, r.UniquePrompts
 	s := r.Summary
 	rep.Summary.Requests, rep.Summary.Succeeded, rep.Summary.Failed = s.Requests, s.Succeeded, s.Failed
 	rep.Summary.DurationSec = s.Duration.Seconds()

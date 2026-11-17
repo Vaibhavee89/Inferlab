@@ -27,6 +27,12 @@ type Config struct {
 	Concurrency int
 	Requests    int
 	Stream      bool
+	// MaxTokens caps output length per request; 0 leaves it to the server.
+	// Fix it when comparing prompt sizes so decode work stays constant.
+	MaxTokens int
+	// UniquePrompts prefixes each request with a distinct nonce so backends
+	// cannot reuse a cached prompt prefix, keeping prefill cost real.
+	UniquePrompts bool
 	// Client defaults to http.DefaultClient.
 	Client *http.Client
 	// Now is the clock; nil means time.Now.
@@ -41,9 +47,12 @@ type Result struct {
 	Concurrency int
 	Requests    int
 	Stream      bool
-	StartedAt   time.Time
-	Samples     []Sample
-	Summary     Summary
+	MaxTokens   int
+	// UniquePrompts records whether requests carried a cache-busting nonce.
+	UniquePrompts bool
+	StartedAt     time.Time
+	Samples       []Sample
+	Summary       Summary
 }
 
 // Run fires cfg.Requests requests through cfg.Concurrency workers. If ctx is
@@ -63,14 +72,6 @@ func Run(ctx context.Context, cfg Config) (Result, error) {
 	if now == nil {
 		now = time.Now
 	}
-	body, err := json.Marshal(chatRequest{
-		Model:    cfg.Model,
-		Messages: []chatMessage{{Role: "user", Content: cfg.Prompt}},
-		Stream:   cfg.Stream,
-	})
-	if err != nil {
-		return Result{}, err
-	}
 	endpoint := strings.TrimRight(cfg.URL, "/") + chatPath
 
 	samples := make([]Sample, cfg.Requests)
@@ -84,7 +85,12 @@ func Run(ctx context.Context, cfg Config) (Result, error) {
 		go func() {
 			defer wg.Done()
 			for i := range jobs {
-				samples[i] = doRequest(ctx, cfg.Client, endpoint, body, cfg.Stream, now)
+				body, err := requestBody(cfg, i)
+				if err != nil {
+					samples[i] = Sample{Err: err}
+				} else {
+					samples[i] = doRequest(ctx, cfg.Client, endpoint, body, cfg.Stream, now)
+				}
 				attempted[i] = true
 			}
 		}()
@@ -109,7 +115,8 @@ dispatch:
 	}
 	res := Result{
 		URL: cfg.URL, Model: cfg.Model, Concurrency: cfg.Concurrency,
-		Requests: cfg.Requests, Stream: cfg.Stream, StartedAt: start.UTC(),
+		Requests: cfg.Requests, Stream: cfg.Stream, MaxTokens: cfg.MaxTokens,
+		UniquePrompts: cfg.UniquePrompts, StartedAt: start.UTC(),
 		Samples: done, Summary: Summarize(done, wall),
 	}
 	return res, ctx.Err()
@@ -121,9 +128,25 @@ type chatMessage struct {
 }
 
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
-	Stream   bool          `json:"stream"`
+	Model     string        `json:"model"`
+	Messages  []chatMessage `json:"messages"`
+	Stream    bool          `json:"stream"`
+	MaxTokens int           `json:"max_tokens,omitempty"`
+}
+
+// requestBody builds the JSON body for request i. With UniquePrompts the
+// nonce goes at the start so no prefix is shared between requests.
+func requestBody(cfg Config, i int) ([]byte, error) {
+	prompt := cfg.Prompt
+	if cfg.UniquePrompts {
+		prompt = fmt.Sprintf("[run %d] %s", i, prompt)
+	}
+	return json.Marshal(chatRequest{
+		Model:     cfg.Model,
+		Messages:  []chatMessage{{Role: "user", Content: prompt}},
+		Stream:    cfg.Stream,
+		MaxTokens: cfg.MaxTokens,
+	})
 }
 
 type apiError struct {
