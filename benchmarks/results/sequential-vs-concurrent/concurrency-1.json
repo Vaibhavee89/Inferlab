@@ -1,0 +1,133 @@
+{
+  "started_at": "2026-11-17T15:35:42.199157Z",
+  "config": {
+    "url": "http://localhost:8080",
+    "model": "qwen2.5:3b",
+    "concurrency": 1,
+    "requests": 16,
+    "stream": true,
+    "max_tokens": 64,
+    "unique_prompts": true
+  },
+  "summary": {
+    "requests": 16,
+    "succeeded": 16,
+    "failed": 0,
+    "duration_sec": 27.502924542,
+    "throughput_rps": 0.5817563137900565,
+    "tokens_per_sec": 37.23240408256362,
+    "ttft_ms": {
+      "p50": 345.261416,
+      "p95": 418.349541,
+      "p99": 418.349541
+    },
+    "tpot_ms": {
+      "p50": 20.780295,
+      "p95": 27.417111,
+      "p99": 27.417111
+    },
+    "latency_ms": {
+      "p50": 1655.650542,
+      "p95": 2100.745708,
+      "p99": 2100.745708
+    }
+  },
+  "samples": [
+    {
+      "ttft_ms": 331.056333,
+      "tpot_ms": 20.780295,
+      "latency_ms": 1640.214958,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 350.609167,
+      "tpot_ms": 18.738458,
+      "latency_ms": 1531.132042,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 340.1985,
+      "tpot_ms": 19.9418,
+      "latency_ms": 1596.531959,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 345.261416,
+      "tpot_ms": 20.614228,
+      "latency_ms": 1643.957833,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 340.843666,
+      "tpot_ms": 21.097469,
+      "latency_ms": 1669.98425,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 337.766292,
+      "tpot_ms": 20.044492,
+      "latency_ms": 1600.569333,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 418.349541,
+      "tpot_ms": 26.704701,
+      "latency_ms": 2100.745708,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 334.623416,
+      "tpot_ms": 21.391147,
+      "latency_ms": 1682.265708,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 353.895542,
+      "tpot_ms": 27.417111,
+      "latency_ms": 2081.173542,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 359.445209,
+      "tpot_ms": 23.719741,
+      "latency_ms": 1853.788917,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 348.646542,
+      "tpot_ms": 20.746095,
+      "latency_ms": 1655.650542,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 343.681417,
+      "tpot_ms": 21.403086,
+      "latency_ms": 1692.075875,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 348.279792,
+      "tpot_ms": 21.148003,
+      "latency_ms": 1680.604,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 344.372958,
+      "tpot_ms": 20.010269,
+      "latency_ms": 1605.019916,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 355.441375,
+      "tpot_ms": 20.518092,
+      "latency_ms": 1648.081208,
+      "tokens": 64
+    },
+    {
+      "ttft_ms": 370.996541,
+      "tpot_ms": 22.988523,
+      "latency_ms": 1819.273541,
+      "tokens": 64
+    }
+  ]
+}

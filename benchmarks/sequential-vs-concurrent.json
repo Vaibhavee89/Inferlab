@@ -1,0 +1,17 @@
+{
+  "name": "sequential-vs-concurrent",
+  "model": "qwen2.5:3b",
+  "defaults": {
+    "prompt_words": 250,
+    "requests": 16,
+    "stream": true,
+    "max_tokens": 64,
+    "unique_prompts": true
+  },
+  "runs": [
+    { "name": "concurrency-1", "concurrency": 1 },
+    { "name": "concurrency-2", "concurrency": 2 },
+    { "name": "concurrency-4", "concurrency": 4 },
+    { "name": "concurrency-8", "concurrency": 8 }
+  ]
+}
