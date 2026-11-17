@@ -81,9 +81,9 @@ func jp(p Percentiles) jsonPercentiles {
 	return jsonPercentiles{msf(p.P50), msf(p.P95), msf(p.P99)}
 }
 
-// WriteJSON saves r as bench-<UTC timestamp>.json in dir, creating dir if
-// needed, and returns the file path. Durations are floating-point milliseconds.
-func WriteJSON(dir string, r Result) (string, error) {
+// encodeJSON renders r as the indented JSON report. Durations are
+// floating-point milliseconds.
+func encodeJSON(r Result) ([]byte, error) {
 	var rep jsonReport
 	rep.StartedAt = r.StartedAt
 	rep.Config.URL, rep.Config.Model = r.URL, r.Model
@@ -114,15 +114,28 @@ func WriteJSON(dir string, r Result) (string, error) {
 
 	data, err := json.MarshalIndent(rep, "", "  ")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
+	return append(data, '\n'), nil
+}
+
+// WriteJSON saves r as bench-<UTC timestamp>.json in dir, creating dir if
+// needed, and returns the file path. Durations are floating-point milliseconds.
+func WriteJSON(dir string, r Result) (string, error) {
 	name := "bench-" + r.StartedAt.UTC().Format("20060102T150405.000Z") + ".json"
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
-		return "", err
+	return path, WriteJSONTo(path, r)
+}
+
+// WriteJSONTo saves r at exactly path, creating parent directories. Suites use
+// it for stable file names so reruns overwrite earlier results.
+func WriteJSONTo(path string, r Result) error {
+	data, err := encodeJSON(r)
+	if err != nil {
+		return err
 	}
-	return path, nil
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
 }
