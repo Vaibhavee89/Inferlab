@@ -12,6 +12,7 @@ InferLab does not reimplement inference. Model execution stays in the backends, 
 | Ollama provider behind the `inference.Provider` interface | Done |
 | TTFT / TPOT / latency metrics, Prometheus `/metrics`, JSON request logs | Done |
 | Benchmark runner and `cmd/bench` CLI | Done |
+| Prometheus + Grafana stack and provisioned dashboard (`docker-compose.yml`) | Done |
 | Router, scheduler, model registry, vLLM provider, Postgres | Planned |
 
 ## Quick start
@@ -85,6 +86,12 @@ Notes on the numbers:
 - **Tokens** are counted as content chunks, which approximates backend tokens.
 - **Percentiles** cover successful requests only. Failures are counted separately.
 - **Ctrl-C** stops early and still reports the requests that ran.
+
+## Monitoring
+
+`docker compose up -d` starts Prometheus (<http://localhost:9090>) and Grafana (<http://localhost:3000>, login `admin` / `admin`). Prometheus scrapes the gateway's `/metrics` every 5s at `host.docker.internal:8080`, so run the server on the host with the default `:8080` address.
+
+Grafana provisions the **InferLab Gateway** dashboard automatically: TTFT P95, TPOT (P50/P95/mean), requests/sec by outcome, and in-flight requests, with a model selector. Run `make bench` to generate load.
 
 ## Development
 

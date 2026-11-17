@@ -191,8 +191,8 @@ Don't start with autoscaling or distributed inference. Build the foundation firs
 
 - [x] Build concurrent request generator (`internal/benchmark`, `cmd/bench`; results in `benchmarks/results/`)
 - [ ] Implement TTFT and TPOT calculations
-- [ ] Integrate Prometheus metrics
-- [ ] Create Grafana dashboard
+- [x] Integrate Prometheus metrics
+- [x] Create Grafana dashboard (`docker-compose.yml`, `deploy/`)
 - [ ] Test different prompt lengths
 - [ ] Compare sequential vs concurrent requests
 
