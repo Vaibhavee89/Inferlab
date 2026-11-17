@@ -11,6 +11,7 @@ import (
 
 	"github.com/Vaibhavee89/inferlab/internal/config"
 	"github.com/Vaibhavee89/inferlab/internal/gateway"
+	"github.com/Vaibhavee89/inferlab/internal/inference"
 )
 
 func main() {
@@ -31,6 +32,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	srv := gateway.NewServer(cfg.Addr, cfg.ShutdownTimeout, gateway.NewRouter(logger), logger)
+	provider := inference.NewOllama(cfg.OllamaURL, nil)
+	srv := gateway.NewServer(cfg.Addr, cfg.ShutdownTimeout, gateway.NewRouter(logger, provider), logger)
 	return srv.Run(ctx)
 }
