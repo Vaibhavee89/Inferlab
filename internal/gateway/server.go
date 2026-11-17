@@ -11,18 +11,20 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Vaibhavee89/inferlab/internal/inference"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// NewRouter builds the HTTP handler tree.
-func NewRouter(logger *slog.Logger) http.Handler {
+// NewRouter builds the HTTP handler tree. Chat completions are served by provider.
+func NewRouter(logger *slog.Logger, provider inference.Provider) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(requestLogger(logger))
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", handleHealthz)
+	r.Post("/v1/chat/completions", newChatHandler(provider, logger).ServeHTTP)
 	return r
 }
 

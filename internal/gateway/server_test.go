@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Vaibhavee89/inferlab/internal/inference/fake"
 )
 
 func discardLogger() *slog.Logger {
@@ -30,7 +32,7 @@ func TestRouter(t *testing.T) {
 		{"healthz wrong method", http.MethodPost, "/healthz", http.StatusMethodNotAllowed, nil},
 	}
 
-	h := NewRouter(discardLogger())
+	h := NewRouter(discardLogger(), &fake.Provider{})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
@@ -65,7 +67,7 @@ func TestServeGracefulShutdown(t *testing.T) {
 	}
 	addr := ln.Addr().String()
 
-	srv := NewServer(addr, 2*time.Second, NewRouter(discardLogger()), discardLogger())
+	srv := NewServer(addr, 2*time.Second, NewRouter(discardLogger(), &fake.Provider{}), discardLogger())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -155,7 +157,7 @@ func TestRunListenError(t *testing.T) {
 	defer ln.Close()
 
 	// Address is already taken, so Run must fail fast rather than block.
-	srv := NewServer(ln.Addr().String(), time.Second, NewRouter(discardLogger()), discardLogger())
+	srv := NewServer(ln.Addr().String(), time.Second, NewRouter(discardLogger(), &fake.Provider{}), discardLogger())
 	if err := srv.Run(context.Background()); err == nil {
 		t.Fatal("Run() = nil, want listen error")
 	}
