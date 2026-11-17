@@ -26,6 +26,13 @@ Modular monolith: `cmd/server/main.go` + `internal/{gateway,router,scheduler,inf
 - Small commits with clear messages.
 - Never add features outside the current milestone.
 
+### Milestone loop
+
+1. Enter plan mode (Shift+Tab) and ask for a plan for the milestone.
+2. Read the plan and fix anything that's off before approving.
+3. Only then implement; do not write code before the plan is approved.
+4. Run `/clear` between milestones to keep context clean. `CLAUDE.md` and `docs/PLAN.md` are the only context carried over, so keep them current.
+
 ## Commands
 
 - `go run ./cmd/server`
