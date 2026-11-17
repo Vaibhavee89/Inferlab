@@ -12,6 +12,10 @@ import (
 // is rejected before streaming starts, so callers can map it to HTTP 400.
 var ErrInvalidRequest = errors.New("inference: invalid request")
 
+// ErrModelNotFound is returned (possibly wrapped) by Generate when the backend
+// does not have the requested model, so callers can map it to HTTP 404.
+var ErrModelNotFound = errors.New("inference: model not found")
+
 // Request describes a single text-generation call.
 type Request struct {
 	Model       string
