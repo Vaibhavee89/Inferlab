@@ -37,4 +37,5 @@ Modular monolith: `cmd/server/main.go` + `internal/{gateway,router,scheduler,inf
 
 - `go run ./cmd/server`
 - `go test -race ./...`
-- `make bench`
+- `make bench` (needs a running server; `MODEL=<name>` to override)
+- `go run ./cmd/bench --model <name> --prompt-file <file> [--url --concurrency --requests --stream --out]`

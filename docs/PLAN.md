@@ -136,6 +136,7 @@ inferlab/
 │   ├── benchmark/
 │   │   ├── runner.go
 │   │   ├── metrics.go
+│   │   ├── report.go
 │   │   └── experiments.go
 │   ├── autoscaler/
 │   │   └── controller.go
@@ -148,7 +149,7 @@ inferlab/
 │   ├── docker/
 │   └── kubernetes/
 ├── frontend/
-├── benchmarks/
+├── benchmarks/          (prompts/, results/)
 ├── configs/
 ├── docker-compose.yml
 └── README.md
@@ -188,7 +189,7 @@ Don't start with autoscaling or distributed inference. Build the foundation firs
 
 **Week 2: Benchmarking and observability**
 
-- [ ] Build concurrent request generator
+- [x] Build concurrent request generator (`internal/benchmark`, `cmd/bench`; results in `benchmarks/results/`)
 - [ ] Implement TTFT and TPOT calculations
 - [ ] Integrate Prometheus metrics
 - [ ] Create Grafana dashboard
