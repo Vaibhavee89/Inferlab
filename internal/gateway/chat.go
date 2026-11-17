@@ -125,6 +125,7 @@ func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond)
 func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Start the clock at handler entry so TTFT includes connect and queue time.
 	tr := observability.NewTracker(h.now)
+	defer h.metrics.TrackInFlight()()
 
 	req, err := decodeChatRequest(w, r)
 	if err != nil {

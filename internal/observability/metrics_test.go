@@ -82,3 +82,43 @@ func TestMetricsObserveFailure(t *testing.T) {
 		}
 	}
 }
+
+func TestMetricsTrackInFlight(t *testing.T) {
+	tests := []struct {
+		name    string
+		started int
+		done    int
+		want    float64
+	}{
+		{"none", 0, 0, 0},
+		{"two in flight", 2, 0, 2},
+		{"one finished", 2, 1, 1},
+		{"all finished", 3, 3, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := prometheus.NewRegistry()
+			m := NewMetrics(reg)
+			var dones []func()
+			for i := 0; i < tt.started; i++ {
+				dones = append(dones, m.TrackInFlight())
+			}
+			for i := 0; i < tt.done; i++ {
+				dones[i]()
+			}
+			fams, err := reg.Gather()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, f := range fams {
+				if f.GetName() == "inferlab_inflight_requests" {
+					if got := f.GetMetric()[0].GetGauge().GetValue(); got != tt.want {
+						t.Errorf("inflight = %v, want %v", got, tt.want)
+					}
+					return
+				}
+			}
+			t.Fatal("inferlab_inflight_requests not registered")
+		})
+	}
+}

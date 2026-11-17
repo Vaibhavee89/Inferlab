@@ -27,6 +27,7 @@ type Metrics struct {
 	duration *prometheus.HistogramVec
 	tokens   *prometheus.HistogramVec
 	requests *prometheus.CounterVec
+	inflight prometheus.Gauge
 }
 
 // NewMetrics creates the collectors and registers them on reg.
@@ -51,8 +52,11 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 		requests: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "inferlab_requests_total", Help: "Chat completion requests by outcome.",
 		}, []string{"model", "status"}),
+		inflight: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "inferlab_inflight_requests", Help: "Chat completion requests currently being served.",
+		}),
 	}
-	reg.MustRegister(m.ttft, m.tpot, m.duration, m.tokens, m.requests)
+	reg.MustRegister(m.ttft, m.tpot, m.duration, m.tokens, m.requests, m.inflight)
 	return m
 }
 
@@ -75,6 +79,13 @@ func (m *Metrics) Observe(model string, stream bool, t Timing) {
 // bad request or client cancellation).
 func (m *Metrics) ObserveFailure(model string) {
 	m.requests.WithLabelValues(model, StatusError).Inc()
+}
+
+// TrackInFlight increments the in-flight gauge and returns the function that
+// decrements it. Call it once per request and defer the result.
+func (m *Metrics) TrackInFlight() (done func()) {
+	m.inflight.Inc()
+	return m.inflight.Dec
 }
 
 // Handler serves reg in the Prometheus text format.

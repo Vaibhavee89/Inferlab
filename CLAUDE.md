@@ -38,4 +38,5 @@ Modular monolith: `cmd/server/main.go` + `internal/{gateway,router,scheduler,inf
 - `go run ./cmd/server`
 - `go test -race ./...`
 - `make bench` (needs a running server; `MODEL=<name>` to override)
+- `docker compose up -d` (Prometheus :9090, Grafana :3000 admin/admin; gateway must run on the host at :8080)
 - `go run ./cmd/bench --model <name> --prompt-file <file> [--url --concurrency --requests --stream --out]`
