@@ -4,7 +4,7 @@ Go control plane (gateway, router, scheduler, benchmark engine) that orchestrate
 
 ## Stack
 
-- Go 1.22+, chi router, `net/http`, SSE for streaming, Prometheus client, Postgres later.
+- Go 1.27.3, chi router, `net/http`, SSE for streaming, Prometheus client, Postgres later.
 - Standard library first, minimal dependencies.
 
 ## Structure
