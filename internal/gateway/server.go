@@ -12,19 +12,27 @@ import (
 	"time"
 
 	"github.com/Vaibhavee89/inferlab/internal/inference"
+	"github.com/Vaibhavee89/inferlab/internal/observability"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-// NewRouter builds the HTTP handler tree. Chat completions are served by provider.
+// NewRouter builds the HTTP handler tree. Chat completions are served by
+// provider; per-request metrics are exposed on /metrics from a registry owned
+// by this router (no global Prometheus state).
 func NewRouter(logger *slog.Logger, provider inference.Provider) http.Handler {
+	reg := prometheus.NewRegistry()
+	metrics := observability.NewMetrics(reg)
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(requestLogger(logger))
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", handleHealthz)
-	r.Post("/v1/chat/completions", newChatHandler(provider, logger).ServeHTTP)
+	r.Handle("/metrics", observability.Handler(reg))
+	r.Post("/v1/chat/completions", newChatHandler(provider, logger, metrics).ServeHTTP)
 	return r
 }
 
