@@ -87,6 +87,12 @@ Notes on the numbers:
 - **Percentiles** cover successful requests only. Failures are counted separately.
 - **Ctrl-C** stops early and still reports the requests that ran.
 
+## Experiments
+
+`go run ./cmd/bench --config <suite.json>` runs a whole experiment: a warm-up request, then each run in the file, with results and a markdown table written to `benchmarks/results/<suite>/`. Suites live in `benchmarks/`; write-ups are in `docs/experiments/`.
+
+- [01: prefill vs decode, sequential vs concurrent](docs/experiments/01-prefill-vs-decode.md)
+
 ## Monitoring
 
 `docker compose up -d` starts Prometheus (<http://localhost:9090>) and Grafana (<http://localhost:3000>, login `admin` / `admin`). Prometheus scrapes the gateway's `/metrics` every 5s at `host.docker.internal:8080`, so run the server on the host with the default `:8080` address.

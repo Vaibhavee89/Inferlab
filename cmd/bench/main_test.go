@@ -82,3 +82,56 @@ func TestRunAllFail(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestRunSuiteEndToEnd(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv := httptest.NewServer(gateway.NewRouter(logger, &fake.Provider{Tokens: []string{"a", "b", "c"}}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "suite.json")
+	suite := `{"name":"demo","model":"m","url":"` + srv.URL + `",
+		"defaults":{"prompt_words":10,"requests":4,"concurrency":1,"stream":true,"max_tokens":4,"unique_prompts":true},
+		"runs":[{"name":"seq"},{"name":"par","concurrency":2}]}`
+	if err := os.WriteFile(cfg, []byte(suite), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(dir, "results")
+
+	var buf bytes.Buffer
+	if err := run([]string{"--config", cfg, "--out", out}, &buf); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"seq.json", "par.json", "tables.md"} {
+		if _, err := os.Stat(filepath.Join(out, "demo", name)); err != nil {
+			t.Errorf("missing %s", name)
+		}
+	}
+	if !strings.Contains(buf.String(), "| seq |") || !strings.Contains(buf.String(), "| par |") {
+		t.Errorf("table missing:\n%s", buf.String())
+	}
+}
+
+func TestRunSuiteErrors(t *testing.T) {
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "bad.json")
+	if err := os.WriteFile(bad, []byte(`{"name":"s","nope":1}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"missing file", []string{"--config", filepath.Join(dir, "none.json")}, "no such file"},
+		{"unknown field", []string{"--config", bad}, "unknown field"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := run(tt.args, io.Discard)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("err = %v, want containing %q", err, tt.want)
+			}
+		})
+	}
+}

@@ -193,8 +193,8 @@ Don't start with autoscaling or distributed inference. Build the foundation firs
 - [ ] Implement TTFT and TPOT calculations
 - [x] Integrate Prometheus metrics
 - [x] Create Grafana dashboard (`docker-compose.yml`, `deploy/`)
-- [ ] Test different prompt lengths
-- [ ] Compare sequential vs concurrent requests
+- [x] Test different prompt lengths (`docs/experiments/01-prefill-vs-decode.md`)
+- [x] Compare sequential vs concurrent requests (`docs/experiments/01-prefill-vs-decode.md`)
 
 ## 7. Learning in public (X/Twitter)
 

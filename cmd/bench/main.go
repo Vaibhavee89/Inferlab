@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -32,8 +33,16 @@ func run(args []string, stdout io.Writer) error {
 	promptFile := fs.String("prompt-file", "", "file containing the prompt (required)")
 	stream := fs.Bool("stream", false, "use SSE streaming (enables TPOT)")
 	out := fs.String("out", "benchmarks/results", "directory for the JSON result")
+	config := fs.String("config", "", "suite file: run every run in it, writing results under <out>/<suite name>/")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+
+	if *config != "" {
+		if *concurrency < 1 || *requests < 1 {
+			return errors.New("--concurrency and --requests must be positive")
+		}
+		return runSuite(*config, *model, *url, *out, stdout)
 	}
 
 	if *model == "" {
@@ -93,4 +102,35 @@ func firstErr(r benchmark.Result) error {
 		}
 	}
 	return nil
+}
+
+// runSuite runs every run in a suite file. --model and --url only fill in what
+// the suite leaves unset; run settings come from the file.
+func runSuite(path, model, url, out string, stdout io.Writer) error {
+	suite, err := benchmark.LoadSuite(path)
+	if err != nil {
+		return err
+	}
+	runs, err := suite.Resolve(model, url)
+	if err != nil {
+		return err
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	dir := filepath.Join(out, suite.Name)
+	results, err := benchmark.RunSuite(ctx, benchmark.Run, runs, dir, stdout)
+	if len(results) > 0 {
+		fmt.Fprintln(stdout)
+		if terr := benchmark.WriteMarkdownTable(stdout, results); terr != nil && err == nil {
+			err = terr
+		}
+		fmt.Fprintf(stdout, "\nresults written to %s\n", dir)
+	}
+	if errors.Is(err, context.Canceled) {
+		fmt.Fprintf(stdout, "interrupted: %d of %d runs finished\n", len(results), len(runs))
+		return nil
+	}
+	return err
 }
